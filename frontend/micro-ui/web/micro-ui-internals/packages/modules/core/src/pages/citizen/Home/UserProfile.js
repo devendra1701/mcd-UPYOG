@@ -267,9 +267,11 @@ const UserProfile = ({ stateCode, userType, cityDetails }) => {
     setNewPassword(value);
 
     if (!new RegExp(/^([a-zA-Z0-9@#$%]{8,15})$/i).test(value)) {
-      setErrors({...errors, newPassword: {type: "pattern", message: t("CORE_COMMON_PROFILE_PASSWORD_INVALID")}})
-    }else{
-      setErrors({...errors, newPassword: null});
+      setErrors({ ...errors, newPassword: { type: "pattern", message: t("CORE_COMMON_PROFILE_PASSWORD_INVALID") } });
+    } else if (currentPassword && value === currentPassword) {
+      setErrors({ ...errors, newPassword: { type: "sameAsCurrent", message: t("CORE_COMMON_PROFILE_SAME_PASSWORD_ERROR") || "New password must be different from current password" } });
+    } else {
+      setErrors({ ...errors, newPassword: null });
     }
   }
 
@@ -329,12 +331,16 @@ const UserProfile = ({ stateCode, userType, cityDetails }) => {
       }
 
       if (currentPassword.length || newPassword.length || confirmPassword.length) {
-        if (newPassword !== confirmPassword) {
-          throw JSON.stringify({ type: "error", message: t("CORE_COMMON_PROFILE_PASSWORD_MISMATCH") });
-        }
-
         if (!(currentPassword.length && newPassword.length && confirmPassword.length)) {
           throw JSON.stringify({ type: "error", message: t("CORE_COMMON_PROFILE_PASSWORD_INVALID") });
+        }
+
+        if (currentPassword === newPassword) {
+          throw JSON.stringify({ type: "error", message: t("CORE_COMMON_PROFILE_SAME_PASSWORD_ERROR") || "New password must be different from current password" });
+        }
+
+        if (newPassword !== confirmPassword) {
+          throw JSON.stringify({ type: "error", message: t("CORE_COMMON_PROFILE_PASSWORD_MISMATCH") });
         }
 
         if (!new RegExp(/^([a-zA-Z0-9@#$%]{8,15})$/i).test(newPassword) && !new RegExp(/^([a-zA-Z0-9@#$%]{8,15})$/i).test(confirmPassword)) {
