@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.FilenameUtils;
@@ -24,11 +26,27 @@ public class StorageValidator {
             Pattern.compile("^[a-zA-Z0-9_\\-\\.() ]+$");
 
     private static final Tika TIKA = new Tika();
+    
+    private static final Set<String> BLOCKED_EXTENSIONS = new HashSet<>();
+
+	static {
+	    BLOCKED_EXTENSIONS.add("php");
+	    BLOCKED_EXTENSIONS.add("jsp");
+	    BLOCKED_EXTENSIONS.add("asp");
+	    BLOCKED_EXTENSIONS.add("exe");
+	    BLOCKED_EXTENSIONS.add("sh");
+	    BLOCKED_EXTENSIONS.add("bat");
+	    BLOCKED_EXTENSIONS.add("js");
+	    BLOCKED_EXTENSIONS.add("html");
+	}
 
     private final FileStoreConfig fileStoreConfig;
 
     @Autowired
     private FileSignatureValidator fileSignatureValidator;
+    
+    @Autowired
+    private FileContentValidator fileContentValidator;
 
     @Autowired
     public StorageValidator(FileStoreConfig fileStoreConfig) {
@@ -38,6 +56,12 @@ public class StorageValidator {
     public void validate(Artifact artifact) {
 
         MultipartFile file = artifact.getMultipartFile();
+        if(file.getSize() == 0){
+            throw new CustomException(
+                    "EG_FILESTORE_INVALID_INPUT",
+                    "Empty file not allowed"
+            );
+        }
 
         if (file == null || file.isEmpty()) {
             throw new CustomException(
@@ -70,6 +94,7 @@ public class StorageValidator {
 
         // advanced protection
         fileSignatureValidator.validateSignature(file, extension);
+        fileContentValidator.validateContent(file, extension);
     }
 
 
@@ -114,10 +139,26 @@ public class StorageValidator {
                     "Filename too long"
             );
         }
+        
+        int dotCount = fileName.length() - fileName.replace(".", "").length();
+
+        if(dotCount != 1){
+            throw new CustomException(
+                    "EG_FILESTORE_INVALID_INPUT",
+                    "Invalid file extension format"
+            );
+        }
     }
 
 
     private void validateExtension(String extension) {
+
+    	if(BLOCKED_EXTENSIONS.contains(extension)){
+    	    throw new CustomException(
+    	            "EG_FILESTORE_INVALID_INPUT",
+    	            "Blocked file type"
+    	    );
+    	}
 
         if (!fileStoreConfig.getAllowedFormatsMap()
                 .containsKey(extension)) {
@@ -141,30 +182,40 @@ public class StorageValidator {
     }
 
 
-    private void validateMimeType(
-            MultipartFile file,
-            String extension) {
+    private void validateMimeType(MultipartFile file, String extension) {
 
-        try (InputStream inputStream = file.getInputStream()) {
+        try(InputStream inputStream = file.getInputStream()){
 
             String detectedType = TIKA.detect(inputStream);
 
-            if (!fileStoreConfig
+            if(!fileStoreConfig
                     .getAllowedFormatsMap()
                     .getOrDefault(extension, Collections.emptyList())
-                    .contains(detectedType)) {
+                    .contains(detectedType)){
 
                 throw new CustomException(
                         "EG_FILESTORE_INVALID_INPUT",
-                        "File extension does not match actual file type"
+                        "File type mismatch"
                 );
             }
 
-        } catch (IOException e) {
+            // Block executable types
+            if(detectedType.contains("x-msdownload")
+                    || detectedType.contains("x-sh")
+                    || detectedType.contains("executable")
+                    || detectedType.contains("x-dosexec")
+                    || detectedType.contains("x-msdos-program")){
 
+                throw new CustomException(
+                        "EG_FILESTORE_INVALID_INPUT",
+                        "Executable files not allowed"
+                );
+            }
+
+        }catch(IOException e){
             throw new CustomException(
                     "EG_FILESTORE_PARSING_ERROR",
-                    "Unable to parse uploaded file"
+                    "Unable to detect MIME type"
             );
         }
     }
@@ -175,6 +226,13 @@ public class StorageValidator {
             String extension) {
 
         String requestType = file.getContentType();
+
+        if(requestType == null){
+            throw new CustomException(
+                    "EG_FILESTORE_INVALID_INPUT",
+                    "Content type missing"
+            );
+        }
 
         if (!fileStoreConfig
                 .getAllowedFormatsMap()

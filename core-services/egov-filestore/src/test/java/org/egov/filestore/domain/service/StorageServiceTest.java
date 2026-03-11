@@ -10,6 +10,7 @@ import org.egov.filestore.persistence.repository.ArtifactRepository;
 import org.egov.filestore.persistence.repository.FileStoreJpaRepository;
 import org.egov.filestore.repository.impl.CloudFileMgrUtils;
 import org.egov.filestore.repository.impl.minio.MinioConfig;
+import org.egov.filestore.validator.FileContentValidator;
 import org.egov.filestore.validator.FileSignatureValidator;
 import org.egov.filestore.validator.StorageValidator;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,6 +42,7 @@ class StorageServiceTest {
     private MinioConfig minioConfig;
     private CloudFileMgrUtils util;
     private FileSignatureValidator fileSignatureValidator;
+    private FileContentValidator fileContentValidator;
 
     @BeforeEach
     void setup() {
@@ -50,6 +52,7 @@ class StorageServiceTest {
         minioConfig = mock(MinioConfig.class);
         util = mock(CloudFileMgrUtils.class);
         fileSignatureValidator = mock(FileSignatureValidator.class);
+        fileContentValidator = mock(FileContentValidator.class);
 
         fileStoreConfig = new FileStoreConfig();
 
@@ -64,7 +67,7 @@ class StorageServiceTest {
 
         storageValidator = new StorageValidator(fileStoreConfig);
         ReflectionTestUtils.setField(storageValidator,"fileSignatureValidator",fileSignatureValidator);
-
+        ReflectionTestUtils.setField(storageValidator,"fileContentValidator",fileContentValidator);
         storageService = new StorageService(
                 artifactRepository,
                 idGeneratorService,

@@ -16,54 +16,65 @@ public class FileSignatureValidator {
 
     static {
 
+        // PDF
         FILE_SIGNATURES.put("pdf",
                 new byte[]{0x25,0x50,0x44,0x46});
 
+        // Images
+        FILE_SIGNATURES.put("jpg",
+                new byte[]{(byte)0xFF,(byte)0xD8});
+        FILE_SIGNATURES.put("jpeg",
+                new byte[]{(byte)0xFF,(byte)0xD8});
         FILE_SIGNATURES.put("png",
                 new byte[]{(byte)0x89,0x50,0x4E,0x47});
 
-        FILE_SIGNATURES.put("jpg",
-                new byte[]{(byte)0xFF,(byte)0xD8});
+        // MS Office old format
+        FILE_SIGNATURES.put("doc",
+                new byte[]{(byte)0xD0,(byte)0xCF,0x11,(byte)0xE0});
+        FILE_SIGNATURES.put("xls",
+                new byte[]{(byte)0xD0,(byte)0xCF,0x11,(byte)0xE0});
 
-        FILE_SIGNATURES.put("jpeg",
-                new byte[]{(byte)0xFF,(byte)0xD8});
-
-        FILE_SIGNATURES.put("gif",
-                new byte[]{0x47,0x49,0x46});
-
-        FILE_SIGNATURES.put("zip",
+        // Office OpenXML (ZIP container)
+        FILE_SIGNATURES.put("docx",
                 new byte[]{0x50,0x4B,0x03,0x04});
+        FILE_SIGNATURES.put("xlsx",
+                new byte[]{0x50,0x4B,0x03,0x04});
+
+        // OpenDocument
+        FILE_SIGNATURES.put("odt",
+                new byte[]{0x50,0x4B,0x03,0x04});
+        FILE_SIGNATURES.put("ods",
+                new byte[]{0x50,0x4B,0x03,0x04});
+
+        // Text formats
+        FILE_SIGNATURES.put("txt", new byte[]{});
+        FILE_SIGNATURES.put("csv", new byte[]{});
+        FILE_SIGNATURES.put("dxf", new byte[]{});
     }
 
-    public void validateSignature(
-            MultipartFile file,
-            String extension) {
+    public void validateSignature(MultipartFile file, String extension) {
 
         if(!FILE_SIGNATURES.containsKey(extension)){
             return;
         }
 
-        byte[] expectedSignature =
-                FILE_SIGNATURES.get(extension);
+        byte[] expected = FILE_SIGNATURES.get(extension);
+
+        if(expected.length == 0){
+            return; // skip signature validation for text files
+        }
 
         try(InputStream is = file.getInputStream()){
 
-            byte[] fileHeader =
-                    new byte[expectedSignature.length];
+            byte[] header = new byte[expected.length];
+            int read = is.read(header);
 
-            int read = is.read(fileHeader);
-
-            if(read < expectedSignature.length){
-                throw new CustomException(
-                        "INVALID_FILE",
-                        "File header too small"
-                );
+            if(read < expected.length){
+                throw new CustomException("INVALID_FILE","Invalid file header");
             }
 
-            for(int i=0;i<expectedSignature.length;i++){
-
-                if(fileHeader[i] != expectedSignature[i]){
-
+            for(int i=0;i<expected.length;i++){
+                if(header[i] != expected[i]){
                     throw new CustomException(
                             "INVALID_FILE",
                             "File signature mismatch"
@@ -72,10 +83,9 @@ public class FileSignatureValidator {
             }
 
         }catch(IOException e){
-
             throw new CustomException(
                     "INVALID_FILE",
-                    "Unable to read file signature"
+                    "Unable to validate file signature"
             );
         }
     }
