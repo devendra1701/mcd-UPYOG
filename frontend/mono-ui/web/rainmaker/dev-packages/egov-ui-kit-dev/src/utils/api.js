@@ -17,16 +17,68 @@ import { addQueryArg, hasTokenExpired, prepareForm } from "./commons";
 import { setUserObj } from "./localStorageUtils";
 import CryptoJS from "crypto-js";
 
-const SECRET_KEY = "MySuperSecretEncryptionKe123456!";
+const SECRET_KEY = process.env.REACT_APP_ENCRYPTION_SECRET;
 
 export const encryptAES = (plainText) => {
-  const encrypted = CryptoJS.AES.encrypt(plainText, SECRET_KEY).toString();
-  return encodeURIComponent(encrypted);
+  if (!plainText) return "";
+
+  // Generate 8-byte random salt
+  const salt = CryptoJS.lib.WordArray.random(8);
+
+  // Derive Key using PBKDF2 (Matches Backend SecretKeyFactory)
+  const key = CryptoJS.PBKDF2(SECRET_KEY, salt, {
+    keySize: 256 / 32,
+    iterations: 1000,
+    hasher: CryptoJS.algo.SHA256,
+  });
+
+  // 3. Generate 16-byte random IV
+  const iv = CryptoJS.lib.WordArray.random(16);
+
+  const encrypted = CryptoJS.AES.encrypt(plainText, key, {
+    iv: iv,
+    mode: CryptoJS.mode.CBC,
+    padding: CryptoJS.pad.Pkcs7,
+  });
+  const combined = CryptoJS.enc.Utf8.parse("Salted__")
+    .concat(salt)
+    .concat(iv)
+    .concat(encrypted.ciphertext);
+
+  // 6. Base64 + URL Encode for transport
+  return encodeURIComponent(CryptoJS.enc.Base64.stringify(combined));
 };
 
 export const decryptAES = (cipherText) => {
-  const bytes = CryptoJS.AES.decrypt(cipherText, SECRET_KEY);
-  return bytes.toString(CryptoJS.enc.Utf8);
+  if (!cipherText) return "";
+  try {
+    const decodedStr = decodeURIComponent(cipherText);
+    const combined = CryptoJS.enc.Base64.parse(decodedStr);
+
+    const salt = CryptoJS.lib.WordArray.create(combined.words.slice(2, 4));
+    const iv = CryptoJS.lib.WordArray.create(combined.words.slice(4, 8));
+    const encryptedData = CryptoJS.lib.WordArray.create(
+      combined.words.slice(8),
+      combined.sigBytes - 32
+    );
+
+    const key = CryptoJS.PBKDF2(SECRET_KEY, salt, {
+      keySize: 256 / 32,
+      iterations: 1000,
+      hasher: CryptoJS.algo.SHA256,
+    });
+
+    const decrypted = CryptoJS.AES.decrypt({ ciphertext: encryptedData }, key, {
+      iv: iv,
+      mode: CryptoJS.mode.CBC,
+      padding: CryptoJS.pad.Pkcs7,
+    });
+
+    return decrypted.toString(CryptoJS.enc.Utf8);
+  } catch (e) {
+    console.error("Decryption failed", e);
+    return "";
+  }
 };
 
 axios.interceptors.response.use(
