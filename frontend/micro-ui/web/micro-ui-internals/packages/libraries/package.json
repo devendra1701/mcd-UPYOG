@@ -1,6 +1,6 @@
 {
   "name": "@mcd89/digit-ui-libraries",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "dist/index.js",
   "module": "dist/index.modern.js",
   "source": "src/index.js",
@@ -44,6 +44,8 @@
     "**/babel-loader": "8.2.3",
     "**/@babel/core": "7.16.0",
     "**/@babel/preset-env": "7.16.0",
-    "**/@babel/plugin-transform-modules-commonjs": "7.16.0"
+    "**/@babel/plugin-transform-modules-commonjs": "7.16.0",
+    "**/@noble/hashes": "1.1.2",
+    "**/@noble/ciphers": "0.2.0"
   }
 }
