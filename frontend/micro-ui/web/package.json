@@ -36,6 +36,7 @@
     "@upyog/digit-ui-module-receipts": "1.8.0",
     "@nudmcdgnpm/digit-ui-react-components": "1.2.13",
     "@nudmcdgnpm/digit-ui-module-pgr": "1.2.1",
+    "@nudmcdgnpm/upyog-ui-module-cm": "1.2.1",
     "@nudmcdgnpm/upyog-ui-module-vendor":"1.2.1",
     "babel-loader": "8.1.0",
     "react": "17.0.2",
@@ -58,7 +59,8 @@
     "glob": "7.2.3",
     "minimatch": "3.1.2",
     "@noble/hashes": "1.1.2",
-    "@noble/ciphers": "0.2.0"
+    "@noble/ciphers": "0.2.0",
+    "pdfkit": "0.12.0"
   },
   "scripts": {
     "start": "react-scripts start",
