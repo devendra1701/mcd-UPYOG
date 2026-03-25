@@ -5,7 +5,7 @@ import { Card, Loader } from "@nudmcdgnpm/digit-ui-react-components";
 import InboxLinks from "../inbox/ApplicationLinks";
 import SearchApplication from "./search";
 import { Link } from "react-router-dom";
-import XLSX from "xlsx";
+import * as XLSX from "xlsx";
 
 const DesktopInbox = ({ tableConfig, filterComponent, ...props }) => {
   const { t } = useTranslation();
