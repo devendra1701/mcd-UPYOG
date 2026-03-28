@@ -85,13 +85,21 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
 
     @Override
     public Authentication authenticate(Authentication authentication) {
-    	String userName = authentication.getName();
-        String encryptedPassword = authentication.getCredentials().toString();
-        String password = passwordCryptoUtil.decrypt(encryptedPassword);
+        String userName = authentication.getName();
+        String credentials = authentication.getCredentials().toString();
         
+        // Get details first to identify userType
         final LinkedHashMap<String, String> details = (LinkedHashMap<String, String>) authentication.getDetails();
         String tenantId = details.get("tenantId");
         String userType = details.get("userType");
+        String password;
+        if (!"SYSTEM".equalsIgnoreCase(userType)) {
+            log.info("Processing encrypted credentials for user: {}", userName);
+            password = passwordCryptoUtil.decrypt(credentials);
+        } else {
+            log.info("Processing plain-text credentials for SYSTEM user: {}", userName);
+            password = credentials;
+        }
         
         // =====================================================
         //  CAPTCHA VALIDATION
