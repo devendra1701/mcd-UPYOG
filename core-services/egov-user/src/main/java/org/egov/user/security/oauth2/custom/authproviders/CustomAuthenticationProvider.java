@@ -133,16 +133,16 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
 	
 	        if (!storedCaptcha.equals(captcha)) {
 	
-	            authAuditLogService.log(
-	                    null,
-	                    userName,
-	                    request.getRemoteAddr(),
-	                    request.getHeader("User-Agent"),
-	                    null,
-	                    "LOGIN",
-	                    "FAILURE",
-	                    request.getRequestURI()
-	            );
+	        	authAuditLogService.log(
+	        	        null,
+	        	        userName,
+	        	        getClientIp(request),
+	        	        request.getHeader("User-Agent"),
+	        	        null,
+	        	        "LOGIN",
+	        	        "FAILURE",
+	        	        request.getRequestURI()
+	        	);
 	
 	            throw new OAuth2Exception("Invalid captcha");
 	        }
@@ -176,15 +176,15 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
         } catch (UserNotFoundException e) {
             log.error("User not found", e);
             authAuditLogService.log(
-                    null,                        // no user UUID
-                    userName,                    // attempted username
-                    request.getRemoteAddr(),
+                    null,                        
+                    userName,                    
+                    getClientIp(request), 
                     request.getHeader("User-Agent"),
                     request.getSession(false) != null ? request.getSession(false).getId() : null,
                     "LOGIN",
                     "FAILURE",
                     request.getRequestURI()
-                );
+            );
 
             throw new OAuth2Exception("Invalid login credentials");
         } catch (DuplicateUserNameException e) {
@@ -192,13 +192,13 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
             authAuditLogService.log(
                     null,
                     userName,
-                    request.getRemoteAddr(),
+                    getClientIp(request),
                     request.getHeader("User-Agent"),
                     null,
                     "LOGIN",
                     "FAILURE",
                     request.getRequestURI()
-                );
+            );
             throw new OAuth2Exception("Invalid login credentials");
 
         }
@@ -264,15 +264,15 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
                     token.getPrincipal() != null ? token.getPrincipal().getClass().getName() : "null"
             );
             authAuditLogService.log(
-            	    user.getUuid(),
-            	    userName,
-            	    request.getRemoteAddr(),
-            	    request.getHeader("User-Agent"),
-            	    request.getSession().getId(),
-            	    "LOGIN",
-            	    "SUCCESS",
-            	    request.getRequestURI()
-            	);
+                    user.getUuid(),
+                    userName,
+                    getClientIp(request), // <--- Changed here
+                    request.getHeader("User-Agent"),
+                    request.getSession().getId(),
+                    "LOGIN",
+                    "SUCCESS",
+                    request.getRequestURI()
+            );
 
             // Return
             return token;
@@ -382,5 +382,26 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
         return value != null && value.startsWith("U2FsdGVkX1");
     }
 
+    private String getClientIp(HttpServletRequest request) {
+        // Try the constant you already have defined first
+        String ipAddress = request.getHeader(IP_HEADER_NAME); 
+        
+        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
+            ipAddress = request.getHeader("X-Forwarded-For");
+        }
+        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
+            ipAddress = request.getHeader("X-Real-IP");
+        }
+        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
+            ipAddress = request.getRemoteAddr();
+        }
+
+        // If there are multiple IPs in X-Forwarded-For, the first one is the true client IP
+        if (ipAddress != null && ipAddress.contains(",")) {
+            ipAddress = ipAddress.split(",")[0].trim();
+        }
+
+        return ipAddress;
+    }
 
 }
