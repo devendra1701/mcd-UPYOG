@@ -18,8 +18,6 @@ public class CustomTokenService extends DefaultTokenServices {
     @Autowired
     private TokenService tokenService;
 
-    @Autowired
-    private TokenStore tokenStore;
     
     // manual token store pass as constructor param removed
     @Autowired
@@ -62,30 +60,5 @@ public class CustomTokenService extends DefaultTokenServices {
         }
         //return super.createAccessToken(authentication);
     }    
-    
-    @Override
-    public OAuth2Authentication loadAuthentication(String accessTokenValue)
-            throws AuthenticationException {
-
-        OAuth2Authentication authentication = super.loadAuthentication(accessTokenValue);
-
-        if (authentication == null) {
-            throw new InvalidTokenException("Invalid token");
-        }
-
-        OAuth2AccessToken accessToken = tokenStore.readAccessToken(accessTokenValue);
-        
-        if (accessToken == null) {
-            throw new InvalidTokenException("Token not found");
-        }
-
-        // 🔥 THIS IS THE MAIN FIX
-        if (accessToken.isExpired()) {
-            throw new InvalidTokenException("Token has expired");
-        }
-
-        return authentication;
-    }
-
 
 }
